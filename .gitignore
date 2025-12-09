@@ -57,3 +57,4 @@ Thumbs.db
 # Alembic
 alembic/versions/*.pyc
 
+.env
