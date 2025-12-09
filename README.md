@@ -6,9 +6,9 @@ A full-stack AI news website that aggregates the latest AI-related news, generat
 
 - **Frontend**: Next.js 14+ (App Router), TypeScript, Tailwind CSS
 - **Backend**: FastAPI (Python 3.11+), Uvicorn
-- **Database**: PostgreSQL
-- **AI**: OpenAI Agents SDK (2025) - Agents API
-- **Authentication**: JWT token-based (email/password)
+- **Storage**: In-memory (no database required)
+- **AI**: OpenAI Agents SDK (2025) - Assistants API v2
+- **Authentication**: JWT token-based (email/password) with in-memory storage
 - **Optional**: YouTube Data API v3
 
 ## Features
@@ -27,8 +27,8 @@ A full-stack AI news website that aggregates the latest AI-related news, generat
 
 - Python 3.11+
 - Node.js 18+
-- PostgreSQL 14+ (or Docker)
 - OpenAI API key
+- **No database required** - uses in-memory storage
 
 ### Setup
 
@@ -45,37 +45,38 @@ A full-stack AI news website that aggregates the latest AI-related news, generat
 3. **Edit `.env` and set required variables:**
    ```env
    OPENAI_API_KEY=your_openai_api_key_here
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ai_deskl
+   JWT_SECRET_KEY=your_secret_key_here_min_32_chars
    ADMIN_TOKEN=your_admin_token_here
    YOUTUBE_API_KEY=your_youtube_api_key_here  # Optional
-   AGENT_MODE=detailed  # or 'cheap' for lighter usage
+   BACKEND_PORT=8000  # Optional, defaults to 8000
+   FRONTEND_PORT=3000  # Optional, defaults to 3000
    ```
 
 4. **Start services:**
+   
+   **Start backend (in one terminal):**
    ```bash
-   ./start_dev.sh
+   cd backend
+   ./start_backend.sh
    ```
    
    Or manually:
    ```bash
-   # Ensure PostgreSQL is running locally
-   # Run migrations
-   ./scripts/migrate.sh
-   
-   # Seed sample data (optional)
-   curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:8000/admin/seed
-   
-   # Start backend (in one terminal)
    cd backend
-   ./start_backend.sh
-   
-   # Or manually:
    python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -r requirements.txt
    uvicorn app.main:app --reload --port 8000
+   ```
    
-   # Start frontend (in another terminal)
+   **Start frontend (in another terminal):**
+   ```bash
+   cd frontend
+   ./run_frontend.sh
+   ```
+   
+   Or manually:
+   ```bash
    cd frontend
    npm install
    npm run dev
@@ -94,38 +95,43 @@ ai_desk/
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── main.py           # FastAPI app entry point
-│   │   ├── db.py             # Database models & connection
+│   │   ├── config.py         # Configuration & environment variables
+│   │   ├── storage.py        # In-memory news storage
+│   │   ├── auth_memory.py    # In-memory authentication storage
 │   │   ├── schemas.py        # Pydantic models
-│   │   ├── agents.py         # OpenAI Agents SDK wrapper
-│   │   ├── ingest.py         # News ingestion (RSS + APIs)
-│   │   ├── tasks.py          # Background tasks & scheduler
+│   │   ├── agents.py         # OpenAI Assistants API v2 wrapper
+│   │   ├── ingest.py         # News ingestion (RSS feeds)
+│   │   ├── youtube.py        # YouTube API integration (optional)
 │   │   └── routers/
 │   │       ├── news.py       # News endpoints
-│   │       ├── admin.py      # Admin endpoints
+│   │       ├── auth_memory.py # Authentication endpoints
 │   │       └── health.py     # Health check
-│   ├── alembic/              # Database migrations
 │   ├── tests/                # Backend tests
 │   ├── requirements.txt
-│   ├── Dockerfile
-│   └── run_server.sh
+│   └── start_backend.sh
 ├── frontend/
 │   ├── app/                  # Next.js App Router
 │   │   ├── layout.tsx
 │   │   ├── page.tsx          # Home page
 │   │   ├── news/
 │   │   │   └── [id]/
-│   │   │       └── page.tsx  # Detail page
-│   │   └── api/              # API routes (if needed)
+│   │   │       └── page.tsx  # Article detail page
+│   │   ├── login/
+│   │   │   └── page.tsx      # Login page
+│   │   └── register/
+│   │       └── page.tsx      # Registration page
 │   ├── components/           # React components
+│   │   ├── NewsCard.tsx
+│   │   ├── CategoryNavbar.tsx
+│   │   ├── Header.tsx
+│   │   └── ...
 │   ├── lib/                  # Utilities & API client
-│   ├── tests/                # Frontend tests
+│   │   ├── api.ts
+│   │   └── auth.ts
+│   ├── public/               # Static assets
 │   ├── package.json
 │   └── run_frontend.sh
-├── scripts/
-│   ├── migrate.sh
-│   └── seed.sh
 ├── .env.example
-├── start_dev.sh
 └── README.md
 ```
 
@@ -136,17 +142,19 @@ ai_desk/
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `OPENAI_API_KEY` | Yes | Your OpenAI API key |
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `JWT_SECRET_KEY` | Yes | Secret key for JWT tokens (minimum 32 characters) |
 | `ADMIN_TOKEN` | Yes | Token for admin endpoints |
 | `YOUTUBE_API_KEY` | No | YouTube Data API v3 key (optional) |
-| `AGENT_MODE` | No | `detailed` (default) or `cheap` |
 | `BACKEND_PORT` | No | Backend port (default: 8000) |
 | `FRONTEND_PORT` | No | Frontend port (default: 3000) |
+| `ENVIRONMENT` | No | Environment name (default: development) |
 
-### Agent Modes
+### Storage
 
-- **`detailed`**: Uses GPT-4 or GPT-4-turbo for comprehensive explanations
-- **`cheap`**: Uses GPT-3.5-turbo for faster, cheaper summaries
+This project uses **in-memory storage** - no database required! All data is stored in memory during runtime:
+- News articles are fetched from RSS feeds and stored in memory
+- User accounts are stored in memory (will be lost on server restart)
+- Articles are generated on-the-fly when requested (not stored)
 
 ## API Endpoints
 
@@ -162,9 +170,12 @@ ai_desk/
 - `POST /api/auth/login` - Login and get JWT token
 - `GET /api/auth/me` - Get current user info (requires authentication)
 
-### Admin
+### Authentication
 
-- `POST /admin/seed` - Seed database with sample data (requires `Authorization: Bearer {ADMIN_TOKEN}`)
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login and get JWT token (stored in HttpOnly cookie)
+- `GET /api/auth/me` - Get current user info (requires authentication)
+- `POST /api/auth/logout` - Logout and clear JWT cookie
 
 ## Development
 
@@ -204,11 +215,15 @@ npm run test:e2e  # Playwright tests
 
 ### Manual Deployment
 
-1. Set up PostgreSQL database
-2. Run migrations: `./scripts/migrate.sh`
-3. Deploy backend (FastAPI + Uvicorn)
-4. Deploy frontend (Next.js build)
-5. Configure reverse proxy (nginx) if needed
+1. Set environment variables in `.env`
+2. Deploy backend (FastAPI + Uvicorn)
+3. Deploy frontend (Next.js build)
+4. Configure reverse proxy (nginx) if needed
+
+**Note**: Since this uses in-memory storage, data will be lost on server restart. For production, consider:
+- Implementing persistent storage (file-based or database)
+- Using a process manager (PM2, systemd) to keep the server running
+- Setting up periodic backups if needed
 
 ## Cost Considerations
 
@@ -225,13 +240,6 @@ npm run test:e2e  # Playwright tests
   - Rate limit ingestion to control costs
 
 ## Troubleshooting
-
-### Database Connection Issues
-
-Ensure PostgreSQL is running and `DATABASE_URL` is correct:
-```bash
-psql $DATABASE_URL -c "SELECT 1"
-```
 
 ### OpenAI API Errors
 

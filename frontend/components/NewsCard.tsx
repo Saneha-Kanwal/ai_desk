@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { NewsItem } from '@/lib/api';
 
@@ -10,73 +10,125 @@ interface NewsCardProps {
 }
 
 export default function NewsCard({ item }: NewsCardProps) {
+  const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
   const publishedDate = new Date(item.published_at);
   const timeAgo = formatDistanceToNow(publishedDate, { addSuffix: true });
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Always navigate to article detail page
+    router.push(`/news/${item.id}`);
+  };
+
   return (
-    <Link href={`/news/${item.id}`}>
-      <div
+    <div onClick={handleClick} className="block h-full group cursor-pointer animate-fade-in-up">
+      <article
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 p-6 h-full flex flex-col cursor-pointer border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 transform hover:-translate-y-1"
+        className="glass-strong rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 p-8 md:p-10 h-full flex flex-col cursor-pointer border border-purple-200/50 dark:border-purple-700/50 hover:border-purple-400/50 dark:hover:border-purple-500/50 transform hover:-translate-y-2 hover:scale-[1.02] relative overflow-hidden group-hover:neon-border"
       >
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-            {item.title}
-          </h2>
-          
-          {item.summary && (
-            <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3 leading-relaxed">
-              {item.summary}
-            </p>
-          )}
-          
-          <div className="flex items-center justify-between mt-4 mb-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-              </svg>
-              <span className="font-medium">{item.source}</span>
-              <span>•</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>{timeAgo}</span>
+        {/* Animated gradient overlay on hover */}
+        <div className={`absolute inset-0 bg-gradient-to-br from-purple-500/0 via-blue-500/0 to-cyan-500/0 transition-opacity duration-500 ${isHovered ? 'opacity-10' : 'opacity-0'}`}></div>
+        
+        {/* Shimmer effect */}
+        <div className={`absolute inset-0 shimmer-effect opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+        
+        {/* Animated border glow */}
+        <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500 -z-10`}></div>
+
+        <div className="relative z-10 flex-1 flex flex-col">
+          {/* Thumbnail Image */}
+          {item.thumbnail && (
+            <div className="mb-4 rounded-xl overflow-hidden aspect-video bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30">
+              <img 
+                src={item.thumbnail} 
+                alt={item.title}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
             </div>
-          </div>
-          
+          )}
+
+          {/* Category Badge */}
+          {item.category && (
+            <div className="mb-3">
+              <span className="px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-blue-500/20 dark:from-purple-500/30 dark:to-blue-500/30 text-purple-700 dark:text-purple-300 text-xs font-bold rounded-full border border-purple-300/50 dark:border-purple-600/50">
+                {item.category}
+              </span>
+            </div>
+          )}
+
+          {/* Tags at top */}
           {item.tags && item.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {item.tags.slice(0, 3).map((tag, index) => (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {item.tags.slice(0, 2).map((tag, index) => (
                 <span
                   key={index}
-                  className="px-3 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 text-xs rounded-full font-medium transition-all hover:bg-primary-200 dark:hover:bg-primary-800"
+                  className="px-3 py-1.5 bg-gradient-to-r from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 text-primary-700 dark:text-primary-300 text-xs font-semibold rounded-full border border-primary-200/50 dark:border-primary-700/50 transition-all hover:scale-110"
                 >
                   {tag}
                 </span>
               ))}
             </div>
           )}
+
+          {/* Title */}
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 line-clamp-2 group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:via-blue-600 group-hover:to-cyan-600 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-300 leading-tight">
+            {item.title}
+          </h2>
+          
+          {/* Summary */}
+          {item.summary && (
+            <p className="text-slate-600 dark:text-slate-300 mb-6 line-clamp-4 leading-relaxed text-base md:text-lg flex-grow">
+              {item.summary}
+            </p>
+          )}
+          
+          {/* Metadata */}
+          <div className="mt-auto pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs animate-glow-pulse shadow-lg">
+                    {item.source.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{item.source}</span>
+                </div>
+                <span className="text-slate-300 dark:text-slate-600">•</span>
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{timeAgo}</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* CTA */}
+            <div className="flex items-center justify-between pt-4">
+              <span className="font-semibold text-sm group-hover:gap-3 transition-all flex items-center gap-2 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                Read Article
+                <svg
+                  className={`w-5 h-5 transition-transform duration-300 ${isHovered ? 'translate-x-2 scale-110' : 'translate-x-0'} animate-pulse`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white transform group-hover:rotate-12 group-hover:scale-110 transition-all duration-300 bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 animate-glow-pulse shadow-lg">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <span className="text-primary-600 dark:text-primary-400 font-medium text-sm">
-            Read more
-          </span>
-          <svg
-            className={`w-5 h-5 text-primary-600 dark:text-primary-400 transition-transform duration-300 ${
-              isHovered ? 'translate-x-1' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </div>
-    </Link>
+      </article>
+    </div>
   );
 }
-

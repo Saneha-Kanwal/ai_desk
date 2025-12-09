@@ -7,10 +7,6 @@ from pathlib import Path
 class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str
-    agent_mode: str = "detailed"  # 'detailed' or 'cheap'
-    
-    # Database
-    database_url: str
     
     # Admin
     admin_token: str

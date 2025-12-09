@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def process_and_store_news_item(item_data: dict, db: Session) -> Optional[NewsItem]:
-    """Process a news item through the agent and store it in the database"""
+    """Store news item metadata in database (NO article content storage - generated on-the-fly)"""
     try:
         # Check if item already exists
         existing = db.query(NewsItem).filter(NewsItem.url == item_data["url"]).first()
@@ -20,22 +20,15 @@ async def process_and_store_news_item(item_data: dict, db: Session) -> Optional[
             logger.debug(f"News item already exists: {item_data['url']}")
             return existing
         
-        # Process with AI agent
-        logger.info(f"Processing news item: {item_data['title'][:50]}...")
-        agent_result = await process_news_item_with_agent(
-            title=item_data["title"],
-            content=item_data.get("content", item_data.get("summary", "")),
-            url=item_data["url"]
-        )
-        
-        # Create news item
+        # Store ONLY metadata (title, url, source, published_at, tags)
+        # Article content will be generated on-the-fly when requested
         news_item = NewsItem(
             title=item_data["title"],
             url=item_data["url"],
             source=item_data["source"],
             published_at=item_data["published_at"],
-            summary=agent_result.get("summary", item_data.get("summary", "")),
-            content=agent_result.get("explanation", item_data.get("content", "")),
+            summary=item_data.get("summary", ""),  # Keep summary from RSS feed
+            content=None,  # NO content storage - generated on-the-fly
             tags=item_data.get("tags", [])
         )
         
@@ -43,26 +36,13 @@ async def process_and_store_news_item(item_data: dict, db: Session) -> Optional[
         db.commit()
         db.refresh(news_item)
         
-        # Process YouTube videos
-        yt_queries = agent_result.get("yt_queries", [])
-        if yt_queries:
-            videos = await search_youtube_videos(yt_queries, limit_per_query=1)
-            for video_data in videos[:3]:  # Limit to top 3 videos
-                video = Video(
-                    news_id=news_item.id,
-                    youtube_id=video_data.get("youtube_id"),
-                    title=video_data["title"],
-                    url=video_data["url"],
-                    published_at=video_data.get("published_at")
-                )
-                db.add(video)
+        # NO YouTube videos stored - generated on-the-fly when article is requested
         
-        db.commit()
-        logger.info(f"Successfully stored news item: {news_item.id}")
+        logger.info(f"Successfully stored news item metadata: {news_item.id} (content will be generated on-the-fly)")
         return news_item
         
     except Exception as e:
-        logger.error(f"Error processing news item: {str(e)}")
+        logger.error(f"Error storing news item: {str(e)}")
         db.rollback()
         return None
 

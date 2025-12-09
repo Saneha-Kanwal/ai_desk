@@ -3,26 +3,52 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import AnimatedLogo from './AnimatedLogo';
 import { authApi, getToken, User } from '@/lib/auth';
 
 export default function Header() {
   const router = useRouter();
+  const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      authApi.getCurrentUser()
-        .then(setUser)
-        .catch(() => {
-          // Token invalid, clear it
+    // Handle scroll effect
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const token = getToken();
+      if (token) {
+        try {
+          const userData = await authApi.getCurrentUser();
+          setUser(userData);
+        } catch (error: any) {
+          // Silently handle auth errors (401/403) - user is just not logged in
+          // Don't log errors that are suppressed or are expected auth failures
+          if (!error.suppressLog && 
+              error.message !== 'Not authenticated' && 
+              !error.isAuthError &&
+              error.response?.status !== 401 && 
+              error.response?.status !== 403) {
+            console.error('Error loading user:', error);
+          }
+          // Clear invalid token and user state
           authApi.logout();
-        })
-        .finally(() => setLoading(false));
-    } else {
+          setUser(null);
+        }
+      } else {
+        // No token, user is not logged in
+        setUser(null);
+      }
       setLoading(false);
-    }
+    };
+    loadUser();
   }, []);
 
   const handleLogout = () => {
@@ -33,35 +59,44 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700">
-      <nav className="container mx-auto px-4 py-4">
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      scrolled ? 'glass-strong shadow-xl py-3' : 'bg-transparent py-4'
+    }`}>
+      <nav className="container mx-auto px-4">
         <div className="flex items-center justify-between">
+          {/* Logo */}
           <Link 
             href="/" 
-            className="text-2xl font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors flex items-center space-x-2"
+            className="flex items-center gap-3 group"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            <span>AI Desk</span>
+            <div className="relative transform group-hover:scale-110 transition-transform duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-400 rounded-xl blur-lg opacity-60 group-hover:opacity-100 transition-opacity animate-glow"></div>
+              <div className="relative bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 rounded-xl p-2 shadow-2xl neon-border">
+                <AnimatedLogo size="md" />
+              </div>
+            </div>
+            <span className="text-2xl font-display font-bold gradient-text neon-glow group-hover:scale-105 transition-transform duration-300">
+              AI Desk
+            </span>
           </Link>
           
-          <div className="flex items-center space-x-4">
+          {/* Navigation */}
+          <div className="flex items-center gap-4">
             {loading ? (
-              <div className="w-32 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              <div className="w-32 h-10 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse"></div>
             ) : user ? (
-              <div className="flex items-center space-x-4">
-                <div className="hidden md:flex items-center space-x-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+              <div className="flex items-center gap-4">
+                <div className="hidden md:flex items-center gap-3 px-4 py-2 glass rounded-xl border border-slate-200/50 dark:border-slate-700/50">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-semibold text-sm">
+                    {user.email.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 max-w-[150px] truncate">
                     {user.email}
                   </span>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-md"
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-xl transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
                 >
                   Logout
                 </button>
@@ -70,13 +105,13 @@ export default function Header() {
               <>
                 <Link
                   href="/login"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  className="px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   Login
                 </Link>
                 <Link
                   href="/register"
-                  className="px-5 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-md"
+                  className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-accent-600 hover:from-primary-700 hover:to-accent-700 rounded-xl transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
                 >
                   Sign Up
                 </Link>
@@ -88,4 +123,3 @@ export default function Header() {
     </header>
   );
 }
-

@@ -41,6 +41,34 @@ async def fetch_rss_feed(feed_url: str) -> List[Dict]:
                     else:
                         published = datetime.utcnow()
                     
+                    # Extract thumbnail/image
+                    thumbnail = None
+                    if entry.get("media_thumbnail"):
+                        thumbnail = entry.media_thumbnail[0].get("url", "")
+                    elif entry.get("media_content"):
+                        thumbnail = entry.media_content[0].get("url", "")
+                    elif entry.get("links"):
+                        for link in entry.links:
+                            if link.get("type", "").startswith("image"):
+                                thumbnail = link.get("href", "")
+                                break
+                    
+                    # Determine category based on title, summary, and tags
+                    title_lower = entry.get("title", "").lower()
+                    summary_lower = entry.get("summary", entry.get("description", "")).lower()
+                    tags_lower = [tag.term.lower() for tag in entry.get("tags", [])]
+                    all_text = f"{title_lower} {summary_lower} {' '.join(tags_lower)}"
+                    
+                    category = "AI-Related News"  # Default
+                    if any(word in all_text for word in ["invention", "invent", "patent", "breakthrough", "discovery", "new technology"]):
+                        category = "Inventions"
+                    elif any(word in all_text for word in ["technology", "tech", "system", "platform", "framework", "tool", "software", "hardware"]):
+                        category = "Technologies"
+                    elif any(word in all_text for word in ["breakthrough", "milestone", "achievement", "advancement", "progress", "innovation"]):
+                        category = "Breakthroughs"
+                    elif any(word in all_text for word in ["ai", "artificial intelligence", "machine learning", "deep learning", "neural", "gpt", "llm"]):
+                        category = "AI-Related News"
+                    
                     items.append({
                         "title": entry.get("title", "Untitled"),
                         "url": entry.get("link", ""),
@@ -48,7 +76,9 @@ async def fetch_rss_feed(feed_url: str) -> List[Dict]:
                         "published_at": published,
                         "summary": entry.get("summary", entry.get("description", "")),
                         "content": entry.get("content", [{}])[0].get("value", "") if entry.get("content") else entry.get("summary", ""),
-                        "tags": [tag.term for tag in entry.get("tags", [])][:5]
+                        "tags": [tag.term for tag in entry.get("tags", [])][:5],
+                        "thumbnail": thumbnail,
+                        "category": category
                     })
                 except Exception as e:
                     logger.warning(f"Error parsing RSS entry: {str(e)}")
@@ -85,6 +115,22 @@ async def fetch_custom_api(api_url: str, api_key: Optional[str] = None) -> List[
                         except:
                             pass
                     
+                    # Extract thumbnail
+                    thumbnail = article.get("urlToImage") or article.get("image") or article.get("thumbnail")
+                    
+                    # Determine category
+                    title_lower = article.get("title", "").lower()
+                    summary_lower = article.get("description", article.get("summary", "")).lower()
+                    all_text = f"{title_lower} {summary_lower}"
+                    
+                    category = "AI-Related News"
+                    if any(word in all_text for word in ["invention", "invent", "patent", "breakthrough", "discovery"]):
+                        category = "Inventions"
+                    elif any(word in all_text for word in ["technology", "tech", "system", "platform"]):
+                        category = "Technologies"
+                    elif any(word in all_text for word in ["breakthrough", "milestone", "achievement"]):
+                        category = "Breakthroughs"
+                    
                     items.append({
                         "title": article.get("title", "Untitled"),
                         "url": article.get("url", article.get("link", "")),
@@ -92,7 +138,9 @@ async def fetch_custom_api(api_url: str, api_key: Optional[str] = None) -> List[
                         "published_at": published,
                         "summary": article.get("description", article.get("summary", "")),
                         "content": article.get("content", article.get("description", "")),
-                        "tags": article.get("tags", article.get("categories", []))[:5]
+                        "tags": article.get("tags", article.get("categories", []))[:5],
+                        "thumbnail": thumbnail,
+                        "category": category
                     })
                 except Exception as e:
                     logger.warning(f"Error parsing API article: {str(e)}")

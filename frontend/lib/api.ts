@@ -10,7 +10,7 @@ const apiClient = axios.create({
   },
 });
 
-// Add auth token to requests
+// Add auth token to requests if available
 apiClient.interceptors.request.use((config) => {
   const headers = getAuthHeaders();
   if (headers.Authorization) {
@@ -18,6 +18,18 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Suppress console errors for 401 responses on auth endpoints (expected when checking auth)
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Suppress 401 errors for /api/auth/me endpoint (expected when not logged in)
+    if (error.config?.url?.includes('/api/auth/me') && error.response?.status === 401) {
+      error.suppressLog = true;
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface NewsItem {
   id: string;
@@ -28,6 +40,8 @@ export interface NewsItem {
   summary: string | null;
   content: string | null;
   tags: string[];
+  thumbnail: string | null;
+  category: string;
   created_at: string;
   updated_at: string;
   videos: Video[];
@@ -55,17 +69,24 @@ export interface TranslateResponse {
 }
 
 export const newsApi = {
-  async getNews(page: number = 1, pageSize: number = 20, search?: string): Promise<NewsListResponse> {
+  async getNews(page: number = 1, pageSize: number = 20, search?: string, category?: string, timePeriod?: string): Promise<NewsListResponse> {
     const params: any = { page, page_size: pageSize };
     if (search) {
       params.search = search;
+    }
+    if (category) {
+      params.category = category;
+    }
+    if (timePeriod) {
+      params.time_period = timePeriod;
     }
     const response = await apiClient.get<NewsListResponse>('/api/news', { params });
     return response.data;
   },
 
-  async getNewsItem(id: string): Promise<NewsItem> {
-    const response = await apiClient.get<NewsItem>(`/api/news/${id}`);
+  async getNewsItem(id: string, forceRegenerate: boolean = false): Promise<NewsItem> {
+    const params = forceRegenerate ? { force_regenerate: 'true' } : {};
+    const response = await apiClient.get<NewsItem>(`/api/news/${id}`, { params });
     return response.data;
   },
 
@@ -73,6 +94,11 @@ export const newsApi = {
     const response = await apiClient.post<TranslateResponse>(`/api/news/${id}/translate`, {
       language,
     });
+    return response.data;
+  },
+
+  async regenerateArticle(id: string): Promise<NewsItem> {
+    const response = await apiClient.post<NewsItem>(`/api/news/${id}/regenerate`);
     return response.data;
   },
 };

@@ -1,0 +1,383 @@
+openapi: 3.0.3
+info:
+  title: AI Desk API
+  description: AI News Aggregator & Explainer API - Complete specification
+  version: 1.0.0
+  contact:
+    name: AI Desk Team
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.aidesk.example.com
+    description: Production server
+
+tags:
+  - name: news
+    description: News article endpoints
+  - name: auth
+    description: Authentication endpoints
+  - name: health
+    description: Health check endpoints
+
+paths:
+  /api/news:
+    get:
+      summary: List news articles
+      description: Fetch news articles with pagination, search, and category filtering
+      tags: [news]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number (1-indexed)
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of items per page
+        - name: search
+          in: query
+          schema:
+            type: string
+          required: false
+          description: Search term for filtering articles
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [AI-Related News, Inventions, Technologies, Breakthroughs]
+          required: false
+          description: Filter by category
+        - name: time_period
+          in: query
+          schema:
+            type: string
+            enum: [20s, 30m, 6h, 1d, 4d, older]
+          required: false
+          description: Filter by time period
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsListResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/news/{id}:
+    get:
+      summary: Get news article with generated content
+      description: Retrieve a specific news article. Automatically generates comprehensive 800+ word article if not already generated.
+      tags: [news]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Article UUID
+        - name: force_regenerate
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Force regeneration of article content
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/auth/register:
+    post:
+      summary: Register new user
+      description: Create a new user account with email and password
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad request (e.g., email already exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      summary: Login user
+      description: Authenticate user and receive JWT token in HttpOnly cookie
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: access_token=eyJ...; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/me:
+    get:
+      summary: Get current user
+      description: Retrieve current authenticated user information
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/logout:
+    post:
+      summary: Logout user
+      description: Clear authentication token cookie
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: access_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0
+
+  /api/health:
+    get:
+      summary: Health check
+      description: Check API health status
+      tags: [health]
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    NewsItemResponse:
+      type: object
+      required: [id, title, url, source, published_at, category, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        source:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        summary:
+          type: string
+          nullable: true
+        content:
+          type: string
+          nullable: true
+          description: Generated article content (800+ words)
+        tags:
+          type: array
+          items:
+            type: string
+        thumbnail:
+          type: string
+          format: uri
+          nullable: true
+        category:
+          type: string
+          enum: [AI-Related News, Inventions, Technologies, Breakthroughs]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        videos:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoResponse'
+
+    NewsListResponse:
+      type: object
+      required: [items, total, page, page_size, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewsItemResponse'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        has_more:
+          type: boolean
+
+    VideoResponse:
+      type: object
+      required: [id, title, url]
+      properties:
+        id:
+          type: string
+          format: uuid
+        youtube_id:
+          type: string
+          nullable: true
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    TokenResponse:
+      type: object
+      required: [access_token, token_type]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+
+    UserResponse:
+      type: object
+      required: [id, email, is_active, is_verified, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        is_active:
+          type: boolean
+        is_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: healthy
+
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+

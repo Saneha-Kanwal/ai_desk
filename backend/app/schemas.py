@@ -61,6 +61,8 @@ class NewsItemResponse(BaseModel):
     summary: Optional[str]
     content: Optional[str]
     tags: List[str]
+    thumbnail: Optional[str] = None
+    category: str = "AI-Related News"
     created_at: datetime
     updated_at: datetime
     videos: List[VideoResponse] = []
