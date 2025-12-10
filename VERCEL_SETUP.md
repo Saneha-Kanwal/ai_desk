@@ -52,6 +52,19 @@ After deployment, check:
 
 ## 🔧 If Still Getting Errors
 
+### Error: "Module not found: Can't resolve '@/lib/auth'" or "Can't resolve 'date-fns'"
+
+**This means Vercel is building from the root directory instead of `frontend/`.**
+
+**Solution:**
+1. Go to **Settings** → **General** → **Root Directory**
+2. Set it to: `frontend` (exactly, case-sensitive, no leading slash)
+3. Click **Save**
+4. Go to **Deployments** tab
+5. Click **Redeploy** on latest deployment
+
+The `vercel.json` file has been added to help, but **Root Directory MUST be set to `frontend`** in Vercel Dashboard.
+
 ### Error: "Could not identify Next.js version"
 
 **Solution:**
