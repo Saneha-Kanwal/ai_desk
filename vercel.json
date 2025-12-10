@@ -3,7 +3,6 @@
   "outputDirectory": "frontend/.next",
   "installCommand": "cd frontend && npm install --legacy-peer-deps",
   "devCommand": "cd frontend && npm run dev",
-  "framework": "nextjs",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ."
+  "framework": "nextjs"
 }
 
