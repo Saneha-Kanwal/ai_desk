@@ -63,6 +63,14 @@ If your backend is deployed separately, use that URL. If not deployed yet, you c
 
 ## 🔧 Troubleshooting
 
+### Error: "Invalid vercel.json file provided"
+
+**Solution:** 
+- This error occurs if there's an invalid or empty `vercel.json` file in the root
+- **Fix:** Delete any `vercel.json` files from the root directory
+- Vercel will auto-detect Next.js when Root Directory is set to `frontend`
+- No `vercel.json` file is needed - Vercel's auto-detection works perfectly
+
 ### Error: "Could not identify Next.js version"
 
 **Solution:** Set Root Directory to `frontend` in Vercel dashboard settings.
@@ -72,7 +80,8 @@ If your backend is deployed separately, use that URL. If not deployed yet, you c
 **Solution:** 
 1. Verify Root Directory is set to `frontend`
 2. Check that `frontend/package.json` exists and has `next` in dependencies
-3. Redeploy
+3. Make sure there are no invalid `vercel.json` files
+4. Redeploy
 
 ### Build Fails
 
@@ -81,6 +90,7 @@ If your backend is deployed separately, use that URL. If not deployed yet, you c
 2. All dependencies are in `frontend/package.json`
 3. No TypeScript errors (run `npm run build` locally first)
 4. Environment variables are set correctly
+5. No invalid `vercel.json` files exist
 
 ### API Calls Fail
 
