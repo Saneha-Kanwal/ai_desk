@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { NewsItem } from '@/lib/api';
 
@@ -40,11 +41,13 @@ export default function NewsCard({ item }: NewsCardProps) {
         <div className="relative z-10 flex-1 flex flex-col">
           {/* Thumbnail Image */}
           {item.thumbnail && (
-            <div className="mb-4 rounded-xl overflow-hidden aspect-video bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30">
-              <img 
+            <div className="mb-4 rounded-xl overflow-hidden aspect-video bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 relative">
+              <Image 
                 src={item.thumbnail} 
                 alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-500"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}

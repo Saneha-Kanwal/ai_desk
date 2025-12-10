@@ -267,6 +267,10 @@ export default function NewsDetailPage() {
     );
   }
 
+  if (!item) {
+    return null;
+  }
+
   const publishedDate = new Date(item.published_at);
   // Use content (detailed explanation) as the main article, fallback to summary if content is not available
   // The content field contains the AI-generated comprehensive article

@@ -296,7 +296,7 @@ export default function Home() {
               </div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Unable to Load News</h2>
               <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">
-                We couldn't connect to the server. Please check your connection and try again.
+                We couldn&apos;t connect to the server. Please check your connection and try again.
               </p>
               <button
                 onClick={() => loadNews(1, debouncedSearch)}
