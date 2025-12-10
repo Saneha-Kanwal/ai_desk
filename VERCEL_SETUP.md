@@ -17,10 +17,15 @@
 
 3. **Configure Project Settings:**
    - **Framework Preset:** Next.js (should auto-detect)
-   - **Root Directory:** ⚠️ **SET THIS TO:** `frontend`
-   - **Build Command:** (leave default - will use `npm run build`)
+   - **Root Directory:** ⚠️ **SET THIS TO:** `frontend` (MOST IMPORTANT!)
+   - **Build Command:** (leave default - `npm run build`)
    - **Output Directory:** (leave default - `.next`)
    - **Install Command:** (leave default - `npm install`)
+   
+   **OR** if Root Directory doesn't work, use these custom commands:
+   - **Build Command:** `cd frontend && npm install && npm run build`
+   - **Output Directory:** `frontend/.next`
+   - **Install Command:** `cd frontend && npm install`
 
 4. **Set Root Directory:**
    - Scroll down to **"Root Directory"** field
