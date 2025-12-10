@@ -1,0 +1,8 @@
+backend/
+*.md
+!README.md
+specs/
+scripts/
+.env
+.env.local
+
